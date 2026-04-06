@@ -1,24 +1,35 @@
+/* index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom classes */
-.btn {
-  @apply px-4 py-2 rounded-lg font-semibold text-white shadow-md;
-}
-.btn-primary { @apply bg-gradient-to-r from-gradient-start to-gradient-end; }
-.btn-success { @apply bg-green-500 hover:bg-green-600; }
-.btn-warning { @apply bg-yellow-500 hover:bg-yellow-600; }
-.btn-danger { @apply bg-red-500 hover:bg-red-600; }
-.btn-purple { @apply bg-purple-500 hover:bg-purple-600; }
-.tab-btn { @apply px-3 py-1 rounded-full font-semibold; }
-.tab-active { @apply bg-gradient-to-r from-gradient-start to-gradient-end text-white; }
-.tab-inactive { @apply bg-gray-200 text-gray-700; }
-.thumb-preview {
-  @apply w-full h-40 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-500 font-bold text-lg;
-}
+/* Gradient text */
 .text-gradient {
-  background: linear-gradient(90deg, #FF6B6B, #FFD93D);
+  background: linear-gradient(90deg, #ff7f50, #1e90ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* Buttons */
+.btn {
+  @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+}
+.btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
+.btn-success { @apply bg-green-600 text-white hover:bg-green-700; }
+.btn-warning { @apply bg-yellow-500 text-black hover:bg-yellow-600; }
+.btn-danger  { @apply bg-red-600 text-white hover:bg-red-700; }
+.btn-purple  { @apply bg-purple-600 text-white hover:bg-purple-700; }
+
+/* Tab buttons */
+.tab-btn { @apply px-3 py-1 rounded-lg font-medium transition; }
+.tab-active { @apply bg-blue-600 text-white; }
+.tab-inactive { @apply bg-gray-200 text-gray-700 hover:bg-gray-300; }
+
+/* Thumbnail preview */
+.thumb-preview { @apply w-full bg-gray-100 flex items-center justify-center rounded shadow-sm; }
+
+/* Video clips */
+video { @apply rounded-lg shadow-lg; }
+
+/* Scrollable outline if many weeks */
+.outline-scroll { @apply overflow-y-auto max-h-[600px]; }
