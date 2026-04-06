@@ -11,36 +11,83 @@ html, body, #root {
 
 body {
   font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #ffffff, #f7f8fa);
+  color: #111827;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app-container {
+  width: 95%;
+  max-width: 1440px;
   background-color: #ffffff;
-  color: #000000;
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  padding: 2rem;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.navbar h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.navbar .icons {
+  display: flex;
+  gap: 1rem;
 }
 
 button {
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
   font-weight: 600;
-}
-
-button.bg-blue-600:hover { background-color: #2563eb; }
-button.bg-green-600:hover { background-color: #16a34a; }
-button.bg-red-600:hover { background-color: #dc2626; }
-button.bg-yellow-500:hover { background-color: #f59e0b; }
-button.bg-purple-600:hover { background-color: #7c3aed; }
-
-canvas {
-  display: block;
-  border-radius: 0.5rem;
-  background-color: #000000;
-}
-
-video {
-  max-width: 100%;
-  border-radius: 0.5rem;
-}
-
-input, textarea {
-  border: 1px solid #ccc;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   font-size: 1rem;
 }
+
+button.bg-blue-600 { background-color: #3b82f6; color: white; }
+button.bg-blue-600:hover { background-color: #2563eb; }
+button.bg-green-600 { background-color: #10b981; color: white; }
+button.bg-green-600:hover { background-color: #059669; }
+button.bg-red-600 { background-color: #ef4444; color: white; }
+button.bg-red-600:hover { background-color: #dc2626; }
+button.bg-yellow-500 { background-color: #f59e0b; color: white; }
+button.bg-yellow-500:hover { background-color: #d97706; }
+button.bg-purple-600 { background-color: #8b5cf6; color: white; }
+button.bg-purple-600:hover { background-color: #7c3aed; }
+
+canvas, video {
+  display: block;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  margin-bottom: 1.5rem;
+}
+
+canvas { background-color: #111827; }
+
+video { background-color: #000000; }
+
+input, textarea {
+  border: 1px solid #d1d5db;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  background-color: #f9fafb;
+  color: #111827;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
