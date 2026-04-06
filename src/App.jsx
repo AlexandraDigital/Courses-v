@@ -187,57 +187,89 @@ export default function App() {
       </div>
 
       <div className="w-full max-w-5xl border p-6 rounded-xl shadow-lg bg-gray-50">
-        {/* Planner */}
-        {tab === "planner" && (
-          <div className="flex flex-col gap-4">
-            <input
-              type="text"
-              placeholder="Course Topic"
-              value={course.topic}
-              onChange={(e) => setCourse({ ...course, topic: e.target.value })}
-              className="border p-2 rounded w-full"
-            />
-            <button onClick={addWeek} className="bg-green-400 text-white px-4 py-2 rounded-lg w-fit">
-              Add Week
+       {/* Planner */}
+{tab === "planner" && (
+  <div className="flex flex-col gap-4">
+    <input
+      type="text"
+      placeholder="Course Topic"
+      value={course.topic}
+      onChange={(e) => setCourse({ ...course, topic: e.target.value })}
+      className="border p-2 rounded w-full"
+    />
+    <button onClick={addWeek} className="bg-green-400 text-white px-4 py-2 rounded-lg w-fit">
+      Add Week
+    </button>
+    <div className="flex flex-col gap-3 mt-4">
+      {course.weeks.map((week, wIdx) => (
+        <div key={wIdx} className="border p-3 rounded bg-white shadow relative">
+          <h3 className="font-semibold mb-2 flex justify-between items-center">
+            Week {week.week}
+            <button
+              onClick={() => {
+                const updatedWeeks = course.weeks.filter((_, idx) => idx !== wIdx);
+                setCourse({ ...course, weeks: updatedWeeks });
+              }}
+              className="text-red-500 font-bold px-2 py-0 rounded"
+            >
+              ❌
             </button>
-            <div className="flex flex-col gap-3 mt-4">
-              {course.weeks.map((week, wIdx) => (
-                <div key={wIdx} className="border p-3 rounded bg-white shadow">
-                  <h3 className="font-semibold mb-2">Week {week.week}</h3>
-                  <button onClick={() => addLesson(wIdx)} className="bg-blue-400 text-white px-2 py-1 rounded mb-2">
-                    Add Lesson
+          </h3>
+          <button onClick={() => addLesson(wIdx)} className="bg-blue-400 text-white px-2 py-1 rounded mb-2">
+            Add Lesson
+          </button>
+          {week.videos.map((video, vIdx) => (
+            <div key={vIdx} className="border p-2 mb-2 rounded bg-gray-50 relative">
+              <input
+                type="text"
+                placeholder="Lesson Title"
+                value={video.title}
+                onChange={(e) => updateLesson(wIdx, vIdx, "title", e.target.value)}
+                className="border p-1 rounded w-full mb-1"
+              />
+              <button
+                onClick={() => {
+                  const updatedWeeks = [...course.weeks];
+                  updatedWeeks[wIdx].videos.splice(vIdx, 1);
+                  setCourse({ ...course, weeks: updatedWeeks });
+                }}
+                className="absolute top-2 right-2 text-red-500 font-bold"
+              >
+                ❌
+              </button>
+
+              <h4 className="font-semibold">Subtopics:</h4>
+              {video.subtopics.map((sub, sIdx) => (
+                <div key={sIdx} className="flex gap-1 items-center mb-1">
+                  <input
+                    type="text"
+                    placeholder="Subtopic"
+                    value={sub}
+                    onChange={(e) => updateSubtopic(wIdx, vIdx, sIdx, e.target.value)}
+                    className="border p-1 rounded w-full"
+                  />
+                  <button
+                    onClick={() => {
+                      const updatedWeeks = [...course.weeks];
+                      updatedWeeks[wIdx].videos[vIdx].subtopics.splice(sIdx, 1);
+                      setCourse({ ...course, weeks: updatedWeeks });
+                    }}
+                    className="text-red-500 font-bold px-1"
+                  >
+                    ❌
                   </button>
-                  {week.videos.map((video, vIdx) => (
-                    <div key={vIdx} className="border p-2 mb-2 rounded bg-gray-50">
-                      <input
-                        type="text"
-                        placeholder="Lesson Title"
-                        value={video.title}
-                        onChange={(e) => updateLesson(wIdx, vIdx, "title", e.target.value)}
-                        className="border p-1 rounded w-full mb-1"
-                      />
-                      <h4 className="font-semibold">Subtopics:</h4>
-                      {video.subtopics.map((sub, sIdx) => (
-                        <input
-                          key={sIdx}
-                          type="text"
-                          placeholder="Subtopic"
-                          value={sub}
-                          onChange={(e) => updateSubtopic(wIdx, vIdx, sIdx, e.target.value)}
-                          className="border p-1 rounded w-full mb-1"
-                        />
-                      ))}
-                      <button onClick={() => addSubtopic(wIdx, vIdx)} className="bg-gray-300 px-2 py-1 rounded text-sm">
-                        + Add Subtopic
-                      </button>
-                    </div>
-                  ))}
                 </div>
               ))}
+              <button onClick={() => addSubtopic(wIdx, vIdx)} className="bg-gray-300 px-2 py-1 rounded text-sm">
+                + Add Subtopic
+              </button>
             </div>
-          </div>
-        )}
-
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
         {/* Thumbnail */}
         {tab === "thumbnail" && (
           <div className="flex flex-col gap-2 items-center">
