@@ -153,74 +153,77 @@ export default function App() {
   };
 
   // AI-powered Outline & Subtopics
-  const generateCourse = async () => {
-    if (!course.topic) return alert("Enter a course topic");
+ const generateCourse = async () => {
+  if (!course.topic) return alert("Enter a course topic");
+
+  try {
     setError("Generating course outline...");
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert course designer.",
-            },
-            {
-              role: "user",
-              content: `Create a ${course.weeks}-week course outline on "${course.topic}" with ${course.videos} lessons per week. Provide each lesson with 1-2 subtopics. Return as JSON array: weeks [{week:1, videos:[{label:'', title:'', subtopics:[] }]}].`,
-            },
-          ],
-          max_tokens: 1000,
-        }),
-      });
-      const data = await res.json();
-      if (data.choices?.[0]?.message?.content) {
-        const parsed = JSON.parse(data.choices[0].message.content);
-        setOutline(parsed);
-        setError("");
-      } else {
-        setError("Outline generation failed.");
-      }
-    } catch (err) {
-      console.error(err);
+
+    const res = await fetch("https://api.groq.ai/v1/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini",
+        prompt: `You are an expert course designer. 
+Create a ${course.weeks}-week course outline on "${course.topic}" with ${course.videos} lessons per week. 
+Each lesson should have 1-2 subtopics. 
+Return as JSON like: { "weeks": [{ "week": 1, "videos": [{ "label": "Lesson 1.1", "title": "Lesson Title", "subtopics": ["Subtopic1", "Subtopic2"] }] }] }`,
+        temperature: 0.7,
+        max_tokens: 600,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.choices?.[0]?.message?.content) {
+      const parsed = JSON.parse(data.choices[0].message.content);
+      setOutline(parsed.weeks);
+      setError("");
+    } else {
       setError("Outline generation failed.");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setError("Outline generation failed.");
+  }
+};
 
   // AI Thumbnail Generator
-  const generateThumbnail = async () => {
-    if (!thumbText) return alert("Enter thumbnail text");
-    try {
-      setError("Generating thumbnail...");
-      const res = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-image-1",
-          prompt: `Create a realistic professional YouTube thumbnail for: ${thumbText}`,
-          size: "1024x1024",
-        }),
-      });
-      const data = await res.json();
-      if (data.data?.[0]?.url) {
-        setThumbnailURL(data.data[0].url);
-        setError("");
-      } else {
-        setError("Thumbnail generation failed");
-      }
-    } catch (err) {
-      console.error(err);
+const generateThumbnail = async () => {
+  if (!thumbText) return alert("Enter thumbnail text");
+
+  try {
+    setError("Generating thumbnail...");
+
+    const res = await fetch("https://api.groq.ai/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-image-1",
+        prompt: `Create a realistic, professional YouTube thumbnail for: ${thumbText}`,
+        size: "1024x1024",
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.data?.[0]?.url) {
+      setThumbnailURL(data.data[0].url);
+      setError("");
+    } else {
       setError("Thumbnail generation failed");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setError("Thumbnail generation failed");
+  }
+};
 
   return (
     <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center p-6 gap-6">
