@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./index.css";
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY; // securely stored in Cloudflare
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
 export default function App() {
   const [tab, setTab] = useState("planner");
@@ -13,6 +13,7 @@ export default function App() {
   const [transcript, setTranscript] = useState(localStorage.getItem("transcript") || "");
   const [course, setCourse] = useState({ topic: "", weeks: 4, videos: 3 });
   const [outline, setOutline] = useState([]);
+  const [manualOutline, setManualOutline] = useState("");
   const [thumbText, setThumbText] = useState("");
   const [thumbnailURL, setThumbnailURL] = useState("");
   const [error, setError] = useState("");
@@ -21,13 +22,8 @@ export default function App() {
   const combinedCanvasRef = useRef(null);
 
   // Autosave
-  useEffect(() => {
-    localStorage.setItem("transcript", transcript);
-  }, [transcript]);
-
-  useEffect(() => {
-    localStorage.setItem("clips", JSON.stringify(clips));
-  }, [clips]);
+  useEffect(() => localStorage.setItem("transcript", transcript), [transcript]);
+  useEffect(() => localStorage.setItem("clips", JSON.stringify(clips)), [clips]);
 
   // Mouse tracking
   useEffect(() => {
@@ -63,34 +59,17 @@ export default function App() {
   const startStudio = async () => {
     try {
       setError("");
-      let screenStream = null;
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      } catch {
-        console.log("Screen capture denied, using camera only");
-      }
       const cam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       const camVideo = document.createElement("video");
       camVideo.srcObject = cam;
       await camVideo.play();
-
-      let screenVideo;
-      if (screenStream) {
-        screenVideo = document.createElement("video");
-        screenVideo.srcObject = screenStream;
-        await screenVideo.play();
-      }
 
       const canvas = combinedCanvasRef.current;
       const ctx = canvas.getContext("2d");
 
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (screenVideo) ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-        else {
-          ctx.fillStyle = "#000";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        ctx.drawImage(camVideo, 0, 0, canvas.width, canvas.height);
         const camW = canvas.width * 0.25;
         const camH = canvas.height * 0.25;
         ctx.drawImage(camVideo, canvas.width - camW - 10, canvas.height - camH - 10, camW, camH);
@@ -128,13 +107,9 @@ export default function App() {
 
   const pauseResume = () => {
     if (!mediaRecorder) return;
-    if (paused) {
-      mediaRecorder.resume();
-      setPaused(false);
-    } else {
-      mediaRecorder.pause();
-      setPaused(true);
-    }
+    if (paused) mediaRecorder.resume();
+    else mediaRecorder.pause();
+    setPaused(!paused);
   };
 
   // Transcription
@@ -152,78 +127,74 @@ export default function App() {
     recognition.start();
   };
 
-  // AI-powered Outline & Subtopics
- const generateCourse = async () => {
-  if (!course.topic) return alert("Enter a course topic");
-
-  try {
-    setError("Generating course outline...");
-
-    const res = await fetch("https://api.groq.ai/v1/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${VITE_GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-5-mini",
-        prompt: `You are an expert course designer. 
-Create a ${course.weeks}-week course outline on "${course.topic}" with ${course.videos} lessons per week. 
-Each lesson should have 1-2 subtopics. 
-Return as JSON like: { "weeks": [{ "week": 1, "videos": [{ "label": "Lesson 1.1", "title": "Lesson Title", "subtopics": ["Subtopic1", "Subtopic2"] }] }] }`,
-        temperature: 0.7,
-        max_tokens: 600,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data.choices?.[0]?.message?.content) {
-      const parsed = JSON.parse(data.choices[0].message.content);
-      setOutline(parsed.weeks);
+  // AI-powered Outline
+  const generateCourse = async () => {
+    if (!course.topic) return alert("Enter a course topic");
+    try {
+      setError("Generating course outline...");
+      const res = await fetch("https://api.groq.ai/v1/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-5-mini",
+          prompt: `You are an expert course designer. Create a ${course.weeks}-week course outline on "${course.topic}" with ${course.videos} lessons per week. Return as JSON { "weeks": [{ "week": 1, "videos": [{ "label": "Lesson 1.1", "title": "Lesson Title", "subtopics": ["Subtopic1", "Subtopic2"] }] }] }`,
+          temperature: 0.7,
+          max_tokens: 600,
+        }),
+      });
+      const data = await res.json();
+      let outlineJSON;
+      try {
+        outlineJSON = JSON.parse(data.choices?.[0]?.message?.content || data.output_text || "{}");
+      } catch {
+        outlineJSON = { weeks: [] };
+      }
+      setOutline(outlineJSON.weeks || []);
       setError("");
-    } else {
+    } catch (err) {
+      console.error(err);
       setError("Outline generation failed.");
     }
-  } catch (err) {
-    console.error(err);
-    setError("Outline generation failed.");
-  }
-};
+  };
 
-  // AI Thumbnail Generator
-const generateThumbnail = async () => {
-  if (!thumbText) return alert("Enter thumbnail text");
-
-  try {
-    setError("Generating thumbnail...");
-
-    const res = await fetch("https://api.groq.ai/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${VITE_GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: `Create a realistic, professional YouTube thumbnail for: ${thumbText}`,
-        size: "1024x1024",
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data.data?.[0]?.url) {
-      setThumbnailURL(data.data[0].url);
-      setError("");
-    } else {
+  // AI Thumbnail
+  const generateThumbnail = async () => {
+    if (!thumbText) return alert("Enter thumbnail text");
+    try {
+      setError("Generating thumbnail...");
+      const res = await fetch("https://api.groq.ai/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-image-1",
+          prompt: `Create a realistic, professional YouTube thumbnail for: ${thumbText}`,
+          size: "1024x1024",
+        }),
+      });
+      const data = await res.json();
+      if (data.data?.[0]?.url) {
+        setThumbnailURL(data.data[0].url);
+        setError("");
+      } else setError("Thumbnail generation failed");
+    } catch (err) {
+      console.error(err);
       setError("Thumbnail generation failed");
     }
-  } catch (err) {
-    console.error(err);
-    setError("Thumbnail generation failed");
-  }
-};
+  };
+
+  // Export MP4
+  const exportClip = (clipUrl, filename = "video.mp4") => {
+    const a = document.createElement("a");
+    a.href = clipUrl;
+    a.download = filename;
+    a.click();
+  };
 
   return (
     <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center p-6 gap-6">
@@ -243,7 +214,7 @@ const generateThumbnail = async () => {
         ))}
       </div>
 
-      <div className="w-full max-w-4xl border p-6 rounded-xl shadow-lg bg-gray-50">
+      <div className="w-full max-w-5xl border p-6 rounded-xl shadow-lg bg-gray-50">
         {/* Planner */}
         {tab === "planner" && (
           <div className="flex flex-col items-center gap-4">
@@ -254,12 +225,29 @@ const generateThumbnail = async () => {
               onChange={(e) => setCourse({ ...course, topic: e.target.value })}
               className="border p-2 rounded w-full"
             />
-            <button
-              onClick={generateCourse}
-              className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg"
-            >
-              Generate AI Outline
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={generateCourse}
+                className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg"
+              >
+                Generate AI Outline
+              </button>
+              <textarea
+                placeholder="Or input manual outline JSON here"
+                value={manualOutline}
+                onChange={(e) => setManualOutline(e.target.value)}
+                className="border p-2 rounded w-full h-24"
+              />
+              <button
+                onClick={() => {
+                  try { setOutline(JSON.parse(manualOutline).weeks); setError(""); }
+                  catch { setError("Invalid JSON"); }
+                }}
+                className="bg-blue-400 text-white px-4 py-2 rounded-lg"
+              >
+                Load Manual Outline
+              </button>
+            </div>
             <div className="w-full mt-4 flex flex-col items-center gap-3">
               {outline.map((w) => (
                 <div key={w.week} className="border p-3 rounded w-full bg-white shadow">
@@ -287,8 +275,8 @@ const generateThumbnail = async () => {
 
         {/* Studio */}
         {tab === "studio" && (
-          <div className="flex flex-col gap-4 items-center">
-            <canvas ref={combinedCanvasRef} width={1280} height={720} className="w-full bg-black rounded-xl shadow-lg" />
+          <div className="flex flex-col gap-4 items-center relative">
+            <canvas ref={combinedCanvasRef} width={1280} height={900} className="w-full bg-black rounded-xl shadow-lg" />
             {recording && <div className="absolute top-2 left-2 bg-red-600 text-white px-3 py-1 rounded-lg font-semibold">{paused ? "PAUSED" : "REC 🔴"}</div>}
             {!recording ? (
               <button onClick={startStudio} className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg">
@@ -333,7 +321,18 @@ const generateThumbnail = async () => {
         {/* Library */}
         {tab === "library" && (
           <div className="flex flex-col gap-2">
-            {clips.length === 0 ? <p>No clips yet</p> : clips.map((c, i) => <video key={i} src={c} controls className="w-full rounded" />)}
+            {clips.length === 0 ? (
+              <p>No clips yet</p>
+            ) : (
+              clips.map((c, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <video src={c} controls className="w-full rounded" />
+                  <button onClick={() => exportClip(c, `clip-${i + 1}.mp4`)} className="bg-blue-500 text-white px-2 py-1 rounded">
+                    Download
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
