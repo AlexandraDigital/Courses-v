@@ -1,5 +1,5 @@
 {
-  "name": "course-video-studio",
+  "name": "Courses-v",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -14,9 +14,10 @@
   },
   "devDependencies": {
     "vite": "^5.4.21",
-    "@vitejs/plugin-react": "^3.2.0",
+    "@vitejs/plugin-react": "^4.0.0",
     "tailwindcss": "^3.4.0",
     "postcss": "^8.4.24",
     "autoprefixer": "^10.4.14"
-  }
+  },
+  "packageManager": "npm@10.9.2"
 }
