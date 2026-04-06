@@ -1,35 +1,54 @@
-/* index.css */
+/* src/index.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Gradient text */
+/* Custom global styles */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  background: #ffffff;
+  color: #111111;
+}
+
 .text-gradient {
-  background: linear-gradient(90deg, #ff7f50, #1e90ff);
+  background: linear-gradient(90deg, #f97316, #ef4444);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Buttons */
-.btn {
-  @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+button {
+  transition: all 0.2s ease-in-out;
 }
-.btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
-.btn-success { @apply bg-green-600 text-white hover:bg-green-700; }
-.btn-warning { @apply bg-yellow-500 text-black hover:bg-yellow-600; }
-.btn-danger  { @apply bg-red-600 text-white hover:bg-red-700; }
-.btn-purple  { @apply bg-purple-600 text-white hover:bg-purple-700; }
 
-/* Tab buttons */
-.tab-btn { @apply px-3 py-1 rounded-lg font-medium transition; }
-.tab-active { @apply bg-blue-600 text-white; }
-.tab-inactive { @apply bg-gray-200 text-gray-700 hover:bg-gray-300; }
+button:hover {
+  transform: scale(1.05);
+}
 
-/* Thumbnail preview */
-.thumb-preview { @apply w-full bg-gray-100 flex items-center justify-center rounded shadow-sm; }
+input, textarea {
+  transition: all 0.2s ease-in-out;
+}
 
-/* Video clips */
-video { @apply rounded-lg shadow-lg; }
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
+}
 
-/* Scrollable outline if many weeks */
-.outline-scroll { @apply overflow-y-auto max-h-[600px]; }
+canvas {
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+img {
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+textarea {
+  resize: vertical;
+}
