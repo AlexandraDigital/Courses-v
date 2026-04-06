@@ -1,4 +1,3 @@
-
 // App.jsx - React Course Video Studio (No Sanity, with GROQ API key env placeholder)
 
 import { useState, useRef, useEffect } from "react";
