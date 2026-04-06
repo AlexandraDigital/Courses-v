@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./index.css";
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY; // securely stored in Cloudflare
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
 export default function App() {
   const [tab, setTab] = useState("planner");
@@ -20,14 +20,44 @@ export default function App() {
 
   const combinedCanvasRef = useRef(null);
 
-  // Mouse tracking
+  // ------------------- AUTOSAVE -------------------
+  useEffect(() => {
+    // Load saved state
+    const savedOutline = localStorage.getItem("outline");
+    const savedThumbnail = localStorage.getItem("thumbnailURL");
+    const savedTranscript = localStorage.getItem("transcript");
+    const savedClips = localStorage.getItem("clips");
+
+    if (savedOutline) setOutline(JSON.parse(savedOutline));
+    if (savedThumbnail) setThumbnailURL(savedThumbnail);
+    if (savedTranscript) setTranscript(savedTranscript);
+    if (savedClips) setClips(JSON.parse(savedClips));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("outline", JSON.stringify(outline));
+  }, [outline]);
+
+  useEffect(() => {
+    localStorage.setItem("thumbnailURL", thumbnailURL);
+  }, [thumbnailURL]);
+
+  useEffect(() => {
+    localStorage.setItem("transcript", transcript);
+  }, [transcript]);
+
+  useEffect(() => {
+    localStorage.setItem("clips", JSON.stringify(clips));
+  }, [clips]);
+
+  // ------------------- MOUSE CURSOR -------------------
   useEffect(() => {
     const handleMouse = (e) => setCursorPos({ x: e.clientX, y: e.clientY });
     window.addEventListener("mousemove", handleMouse);
     return () => window.removeEventListener("mousemove", handleMouse);
   }, []);
 
-  // Camera preview
+  // ------------------- CAMERA PREVIEW -------------------
   useEffect(() => {
     const initCamera = async () => {
       try {
@@ -56,7 +86,7 @@ export default function App() {
     initCamera();
   }, []);
 
-  // Studio recording
+  // ------------------- RECORDING -------------------
   const startStudio = async () => {
     try {
       setError("");
@@ -135,7 +165,7 @@ export default function App() {
     }
   };
 
-  // Transcription
+  // ------------------- TRANSCRIPTION -------------------
   const startTranscript = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported");
@@ -150,36 +180,51 @@ export default function App() {
     recognition.start();
   };
 
-  // Course outline
-  const lessonPatterns = [
-    "Introduction",
-    "Core Concepts",
-    "Deep Dive",
-    "Practical Application",
-    "Common Mistakes",
-    "Advanced Tips",
-  ];
-  const generateCourse = () => {
-    let weeks = [];
-    for (let w = 1; w <= course.weeks; w++) {
-      let vids = [];
-      for (let v = 1; v <= course.videos; v++) {
-        const pattern = lessonPatterns[(v - 1) % lessonPatterns.length];
-        vids.push({
-          label: `Lesson ${w}.${v}`,
-          title: course.topic ? `${pattern}: ${course.topic}` : pattern,
-        });
+  // ------------------- AI COURSE OUTLINE -------------------
+  const generateCourse = async () => {
+    if (!course.topic) return alert("Enter course topic");
+
+    setError("Generating AI-powered course outline...");
+
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: `Create a professional ${course.weeks}-week course outline on "${course.topic}". 
+              Each week should have ${course.videos} unique lessons with subtopics and action points, formatted as JSON like: 
+              [{ "week": 1, "videos": [{"label": "Lesson 1.1","title":"..."}, ...]}, ...]`,
+            },
+          ],
+          temperature: 0.7,
+        }),
+      });
+      const data = await res.json();
+      if (data.choices?.[0]?.message?.content) {
+        const parsed = JSON.parse(data.choices[0].message.content);
+        setOutline(parsed);
+        setError("");
+      } else {
+        setError("AI outline generation failed");
       }
-      weeks.push({ week: w, videos: vids });
+    } catch (err) {
+      console.error(err);
+      setError("AI outline generation failed");
     }
-    setOutline(weeks);
   };
 
-  // AI thumbnail generator
+  // ------------------- AI THUMBNAIL -------------------
   const generateThumbnail = async () => {
     if (!thumbText) return alert("Enter thumbnail text");
     try {
-      setError("Generating thumbnail...");
+      setError("Generating AI thumbnail...");
       const res = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
@@ -188,7 +233,7 @@ export default function App() {
         },
         body: JSON.stringify({
           model: "gpt-image-1",
-          prompt: `Create a realistic, professional, high-quality YouTube thumbnail for: ${thumbText}`,
+          prompt: `Create a realistic professional YouTube thumbnail for: ${thumbText}`,
           size: "1024x1024",
         }),
       });
@@ -197,16 +242,17 @@ export default function App() {
         setThumbnailURL(data.data[0].url);
         setError("");
       } else {
-        setError("Thumbnail generation failed. Try refining your text.");
+        setError("Thumbnail generation failed");
       }
     } catch (err) {
       console.error(err);
-      setError("Thumbnail generation failed. Check your API key and internet connection.");
+      setError("Thumbnail generation failed");
     }
   };
 
+  // ------------------- RENDER -------------------
   return (
-    <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center justify-start p-6 gap-6">
+    <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center p-6 gap-6">
       <h1 className="text-3xl font-bold text-gradient">🎬 Course Video Studio Pro</h1>
 
       <div className="flex gap-3">
@@ -226,24 +272,24 @@ export default function App() {
       <div className="w-full max-w-4xl border p-6 rounded-xl shadow-lg bg-gray-50">
         {/* Planner */}
         {tab === "planner" && (
-          <div className="flex flex-col gap-4 items-center">
+          <div className="flex flex-col items-center gap-4">
             <input
               type="text"
               placeholder="Course Topic"
               value={course.topic}
               onChange={(e) => setCourse({ ...course, topic: e.target.value })}
-              className="border p-2 rounded w-full max-w-lg"
+              className="border p-2 rounded w-full"
             />
             <button
               onClick={generateCourse}
               className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg"
             >
-              Generate Outline
+              Generate AI Outline
             </button>
-            <div className="w-full mt-4 flex flex-col items-center gap-2">
+            <div className="w-full overflow-x-auto mt-4 flex flex-col items-center gap-2">
               {outline.map((w) => (
-                <div key={w.week} className="mb-2 border p-4 rounded w-full max-w-md bg-white shadow">
-                  <h3 className="font-semibold text-lg mb-2 text-center">Week {w.week}</h3>
+                <div key={w.week} className="mb-2 border p-2 rounded w-full max-w-xl">
+                  <h3 className="font-semibold text-center">Week {w.week}</h3>
                   <ul className="list-disc ml-6">
                     {w.videos.map((v) => (
                       <li key={v.label}>{v.title}</li>
@@ -262,7 +308,7 @@ export default function App() {
               ref={combinedCanvasRef}
               width={1280}
               height={720}
-              className="w-full max-w-4xl bg-black rounded-xl shadow-lg"
+              className="w-full bg-black rounded-xl shadow-lg"
             />
             {recording && (
               <div className="absolute top-2 left-2 bg-red-600 text-white px-3 py-1 rounded-lg font-semibold">
@@ -321,7 +367,7 @@ export default function App() {
               placeholder="Thumbnail Text"
               value={thumbText}
               onChange={(e) => setThumbText(e.target.value)}
-              className="border px-2 py-1 w-full max-w-md rounded"
+              className="border px-2 py-1 w-full rounded"
             />
             <button
               onClick={generateThumbnail}
@@ -333,7 +379,7 @@ export default function App() {
               <img
                 src={thumbnailURL}
                 alt="Generated Thumbnail"
-                className="w-full max-w-md rounded shadow-lg mt-2"
+                className="w-full max-w-sm rounded shadow-lg mt-2"
               />
             )}
             {error && <p className="text-red-600 mt-2">{error}</p>}
@@ -342,12 +388,12 @@ export default function App() {
 
         {/* Library */}
         {tab === "library" && (
-          <div className="flex flex-col gap-2 items-center">
+          <div className="flex flex-col gap-2">
             {clips.length === 0 ? (
               <p>No clips yet</p>
             ) : (
               clips.map((c, i) => (
-                <video key={i} src={c} controls className="w-full max-w-md rounded" />
+                <video key={i} src={c} controls className="w-full rounded" />
               ))
             )}
           </div>
