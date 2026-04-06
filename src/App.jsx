@@ -163,7 +163,7 @@ export default function App() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${VITE_GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-5-mini",
@@ -202,7 +202,7 @@ const generateThumbnail = async () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${VITE_GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-image-1",
