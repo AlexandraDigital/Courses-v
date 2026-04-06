@@ -2,8 +2,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./index.css";
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-
 export default function App() {
   const [tab, setTab] = useState("planner");
   const [recording, setRecording] = useState(false);
@@ -11,14 +9,12 @@ export default function App() {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [clips, setClips] = useState(JSON.parse(localStorage.getItem("clips") || "[]"));
   const [transcript, setTranscript] = useState(localStorage.getItem("transcript") || "");
-  const [course, setCourse] = useState({ topic: "", weeks: 4, videos: 3 });
-  const [outline, setOutline] = useState([]);
-  const [manualOutline, setManualOutline] = useState("");
-  const [thumbText, setThumbText] = useState("");
-  const [thumbnailURL, setThumbnailURL] = useState("");
+  const [course, setCourse] = useState({ topic: "", weeks: [] });
+  const [thumbFile, setThumbFile] = useState(null);
+  const [thumbURL, setThumbURL] = useState("");
   const [error, setError] = useState("");
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [shareLinks, setShareLinks] = useState({}); // {clipIndex: url}
+  const [shareLinks, setShareLinks] = useState({});
 
   const combinedCanvasRef = useRef(null);
 
@@ -49,8 +45,8 @@ export default function App() {
           requestAnimationFrame(draw);
         };
         draw();
-      } catch (err) {
-        setError("Camera access denied. Allow camera and microphone permissions.");
+      } catch {
+        setError("Camera access denied.");
       }
     };
     initCamera();
@@ -59,7 +55,6 @@ export default function App() {
   // Studio recording
   const startStudio = async () => {
     try {
-      setError("");
       const cam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       const camVideo = document.createElement("video");
       camVideo.srcObject = cam;
@@ -95,8 +90,8 @@ export default function App() {
       setMediaRecorder(recorder);
       setRecording(true);
       setPaused(false);
-    } catch (err) {
-      setError("Recording failed. Check camera/mic permissions.");
+    } catch {
+      setError("Recording failed.");
     }
   };
 
@@ -105,121 +100,70 @@ export default function App() {
     setRecording(false);
     setPaused(false);
   };
-
   const pauseResume = () => {
     if (!mediaRecorder) return;
-    if (paused) mediaRecorder.resume();
-    else mediaRecorder.pause();
+    paused ? mediaRecorder.resume() : mediaRecorder.pause();
     setPaused(!paused);
   };
 
-  // Transcription
+  // Transcript
   const startTranscript = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return alert("Speech recognition not supported");
+    if (!SpeechRecognition) return alert("Speech recognition not supported in this browser.");
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
+    recognition.interimResults = true;
+
     recognition.onresult = (event) => {
       let text = "";
-      for (let i = event.resultIndex; i < event.results.length; i++)
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         text += event.results[i][0].transcript;
+      }
       setTranscript((prev) => prev + " " + text);
     };
+
+    recognition.onerror = (e) => setError("Transcription error: " + e.error);
+    recognition.onend = () => setRecording(false);
+
     recognition.start();
+    setRecording(true);
+    setError("");
+    window.transcriptionInstance = recognition;
   };
 
-  // AI-powered Outline
-  const generateCourse = async () => {
-    if (!course.topic) return alert("Enter a course topic");
-    try {
-      setError("Generating course outline...");
-      const res = await fetch("https://api.groq.ai/v1/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-5-mini",
-          prompt: `You are an expert course designer. Create a ${course.weeks}-week course outline on "${course.topic}" with ${course.videos} lessons per week. Return as JSON { "weeks": [{ "week": 1, "videos": [{ "label": "Lesson 1.1", "title": "Lesson Title", "subtopics": ["Subtopic1", "Subtopic2"] }] }] }`,
-          temperature: 0.7,
-          max_tokens: 600,
-        }),
-      });
-      const data = await res.json();
-      let outlineJSON;
-      try {
-        outlineJSON = JSON.parse(data.choices?.[0]?.message?.content || data.output_text || "{}");
-      } catch {
-        outlineJSON = { weeks: [] };
-      }
-      setOutline(outlineJSON.weeks || []);
-      setError("");
-    } catch (err) {
-      console.error(err);
-      setError("Outline generation failed.");
-    }
+  // Planner functions
+  const addWeek = () => {
+    setCourse((prev) => ({ ...prev, weeks: [...prev.weeks, { week: prev.weeks.length + 1, videos: [] }] }));
+  };
+  const addLesson = (weekIndex) => {
+    const updatedWeeks = [...course.weeks];
+    updatedWeeks[weekIndex].videos.push({ title: "", subtopics: [""] });
+    setCourse({ ...course, weeks: updatedWeeks });
+  };
+  const updateLesson = (weekIndex, videoIndex, field, value) => {
+    const updatedWeeks = [...course.weeks];
+    updatedWeeks[weekIndex].videos[videoIndex][field] = value;
+    setCourse({ ...course, weeks: updatedWeeks });
+  };
+  const updateSubtopic = (weekIndex, videoIndex, subIndex, value) => {
+    const updatedWeeks = [...course.weeks];
+    updatedWeeks[weekIndex].videos[videoIndex].subtopics[subIndex] = value;
+    setCourse({ ...course, weeks: updatedWeeks });
+  };
+  const addSubtopic = (weekIndex, videoIndex) => {
+    const updatedWeeks = [...course.weeks];
+    updatedWeeks[weekIndex].videos[videoIndex].subtopics.push("");
+    setCourse({ ...course, weeks: updatedWeeks });
   };
 
-  // AI Thumbnail
-  const generateThumbnail = async () => {
-    if (!thumbText) return alert("Enter thumbnail text");
-    try {
-      setError("Generating thumbnail...");
-      const res = await fetch("https://api.groq.ai/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-image-1",
-          prompt: `Create a realistic, professional YouTube thumbnail for: ${thumbText}`,
-          size: "1024x1024",
-        }),
-      });
-      const data = await res.json();
-      if (data.data?.[0]?.url) {
-        setThumbnailURL(data.data[0].url);
-        setError("");
-      } else setError("Thumbnail generation failed");
-    } catch (err) {
-      console.error(err);
-      setError("Thumbnail generation failed");
-    }
+  // Thumbnail upload
+  const handleThumbUpload = (e) => {
+    const file = e.target.files[0];
+    setThumbFile(file);
+    setThumbURL(URL.createObjectURL(file));
   };
 
-  // Upload clip to Cloudflare Worker + R2
-  const uploadClip = async (blob, filename) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", blob, filename);
-
-      const res = await fetch("https://your-worker-domain/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        return data.url;
-      } else throw new Error("Upload failed");
-    } catch (err) {
-      console.error(err);
-      setError("Video upload failed");
-      return null;
-    }
-  };
-
-  // Export MP4 locally
-  const exportClip = (clipUrl, filename = "video.mp4") => {
-    const a = document.createElement("a");
-    a.href = clipUrl;
-    a.download = filename;
-    a.click();
-  };
-
-  // Copy link to clipboard
+  // Share/copy URL
   const copyToClipboard = (url) => {
     navigator.clipboard.writeText(url);
     alert("Copied shareable URL!");
@@ -228,7 +172,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center p-6 gap-6">
       <h1 className="text-3xl font-bold text-gradient">🎬 Course Video Studio Pro</h1>
-
       <div className="flex gap-3">
         {["planner", "studio", "transcript", "thumbnail", "library"].map((t) => (
           <button
@@ -246,7 +189,7 @@ export default function App() {
       <div className="w-full max-w-5xl border p-6 rounded-xl shadow-lg bg-gray-50">
         {/* Planner */}
         {tab === "planner" && (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col gap-4">
             <input
               type="text"
               placeholder="Course Topic"
@@ -254,55 +197,52 @@ export default function App() {
               onChange={(e) => setCourse({ ...course, topic: e.target.value })}
               className="border p-2 rounded w-full"
             />
-            <div className="flex gap-2 flex-col md:flex-row w-full">
-              <button
-                onClick={generateCourse}
-                className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg"
-              >
-                Generate AI Outline
-              </button>
-              <textarea
-                placeholder="Or input manual outline JSON here"
-                value={manualOutline}
-                onChange={(e) => setManualOutline(e.target.value)}
-                className="border p-2 rounded w-full h-24"
-              />
-              <button
-                onClick={() => {
-                  try {
-                    setOutline(JSON.parse(manualOutline).weeks);
-                    setError("");
-                  } catch {
-                    setError("Invalid JSON");
-                  }
-                }}
-                className="bg-blue-400 text-white px-4 py-2 rounded-lg"
-              >
-                Load Manual Outline
-              </button>
-            </div>
-            <div className="w-full mt-4 flex flex-col items-center gap-3">
-              {outline.map((w) => (
-                <div key={w.week} className="border p-3 rounded w-full bg-white shadow">
-                  <h3 className="font-semibold mb-1">Week {w.week}</h3>
-                  <ul className="list-disc ml-6">
-                    {w.videos.map((v) => (
-                      <li key={v.label}>
-                        <strong>{v.title}</strong>
-                        {v.subtopics && v.subtopics.length > 0 && (
-                          <ul className="list-circle ml-4">
-                            {v.subtopics.map((s, i) => (
-                              <li key={i}>{s}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+            <button onClick={addWeek} className="bg-green-400 text-white px-4 py-2 rounded-lg w-fit">
+              Add Week
+            </button>
+            <div className="flex flex-col gap-3 mt-4">
+              {course.weeks.map((week, wIdx) => (
+                <div key={wIdx} className="border p-3 rounded bg-white shadow">
+                  <h3 className="font-semibold mb-2">Week {week.week}</h3>
+                  <button onClick={() => addLesson(wIdx)} className="bg-blue-400 text-white px-2 py-1 rounded mb-2">
+                    Add Lesson
+                  </button>
+                  {week.videos.map((video, vIdx) => (
+                    <div key={vIdx} className="border p-2 mb-2 rounded bg-gray-50">
+                      <input
+                        type="text"
+                        placeholder="Lesson Title"
+                        value={video.title}
+                        onChange={(e) => updateLesson(wIdx, vIdx, "title", e.target.value)}
+                        className="border p-1 rounded w-full mb-1"
+                      />
+                      <h4 className="font-semibold">Subtopics:</h4>
+                      {video.subtopics.map((sub, sIdx) => (
+                        <input
+                          key={sIdx}
+                          type="text"
+                          placeholder="Subtopic"
+                          value={sub}
+                          onChange={(e) => updateSubtopic(wIdx, vIdx, sIdx, e.target.value)}
+                          className="border p-1 rounded w-full mb-1"
+                        />
+                      ))}
+                      <button onClick={() => addSubtopic(wIdx, vIdx)} className="bg-gray-300 px-2 py-1 rounded text-sm">
+                        + Add Subtopic
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
-            {error && <p className="text-red-600 mt-2">{error}</p>}
+          </div>
+        )}
+
+        {/* Thumbnail */}
+        {tab === "thumbnail" && (
+          <div className="flex flex-col gap-2 items-center">
+            <input type="file" accept="image/*" onChange={handleThumbUpload} className="border p-1 rounded w-full" />
+            {thumbURL && <img src={thumbURL} alt="Thumbnail" className="w-full max-w-sm rounded shadow-lg mt-2" />}
           </div>
         )}
 
@@ -331,23 +271,38 @@ export default function App() {
 
         {/* Transcript */}
         {tab === "transcript" && (
-          <div className="flex flex-col gap-2">
-            <button onClick={startTranscript} className="bg-purple-500 text-white px-4 py-2 rounded-lg mb-2">
-              Start Transcription
-            </button>
-            <textarea value={transcript} readOnly className="w-full h-64 border p-2 rounded" />
-          </div>
-        )}
-
-        {/* Thumbnail */}
-        {tab === "thumbnail" && (
-          <div className="flex flex-col gap-2 items-center">
-            <input type="text" placeholder="Thumbnail Text" value={thumbText} onChange={(e) => setThumbText(e.target.value)} className="border px-2 py-1 w-full rounded" />
-            <button onClick={generateThumbnail} className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-4 py-2 rounded-lg">
-              Generate AI Thumbnail
-            </button>
-            {thumbnailURL && <img src={thumbnailURL} alt="Generated Thumbnail" className="w-full max-w-sm rounded shadow-lg mt-2" />}
-            {error && <p className="text-red-600 mt-2">{error}</p>}
+          <div className="flex flex-col gap-2 w-full">
+            <div className="flex gap-2 mb-2">
+              {!recording ? (
+                <button onClick={startTranscript} className="bg-purple-500 text-white px-4 py-2 rounded-lg">
+                  Start Transcription
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    window.transcriptionInstance?.stop();
+                    setRecording(false);
+                  }}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg"
+                >
+                  Stop Transcription
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  const blob = new Blob([transcript], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "transcript.txt";
+                  a.click();
+                }}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg"
+              >
+                Download Transcript
+              </button>
+            </div>
+            <textarea value={transcript} readOnly className="w-full h-64 border p-2 rounded" placeholder="Your transcript will appear here..." />
           </div>
         )}
 
@@ -364,22 +319,18 @@ export default function App() {
                     <button
                       onClick={async () => {
                         const blob = await fetch(c).then((r) => r.blob());
-                        const url = await uploadClip(blob, `clip-${i + 1}.mp4`);
-                        if (url) {
-                          setShareLinks((prev) => ({ ...prev, [i]: url }));
-                          copyToClipboard(url);
-                        }
+                        const url = URL.createObjectURL(blob);
+                        setShareLinks((prev) => ({ ...prev, [i]: url }));
+                        copyToClipboard(url);
                       }}
                       className="bg-green-500 text-white px-3 py-1 rounded"
                     >
-                      Upload & Copy Link
+                      Copy Link
                     </button>
                     <a href={c} download={`clip-${i + 1}.mp4`} target="_blank" className="text-blue-600 underline">
                       Download
                     </a>
-                    {shareLinks[i] && (
-                      <input type="text" readOnly value={shareLinks[i]} className="border px-2 py-1 w-full md:w-64 rounded" />
-                    )}
+                    {shareLinks[i] && <input type="text" readOnly value={shareLinks[i]} className="border px-2 py-1 w-full md:w-64 rounded" />}
                   </div>
                 </div>
               ))
