@@ -1,12 +1,13 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  background: #f9f9f9;
+body {
+  margin:0;
   font-family: 'Inter', sans-serif;
+}
+
+canvas {
+  display: block;
 }
