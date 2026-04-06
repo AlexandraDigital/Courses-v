@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import './index.css';
 
@@ -17,15 +18,16 @@ export default function App() {
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
 
   const combinedCanvasRef = useRef(null);
+  const thumbCanvasRef = useRef(null);
 
-  // Cursor tracking
+  // --- Cursor tracking ---
   useEffect(() => {
-    const handleMouse = e => setCursorPos({ x: e.clientX, y: e.clientY });
+    const handleMouse = (e) => setCursorPos({ x: e.clientX, y: e.clientY });
     window.addEventListener('mousemove', handleMouse);
     return () => window.removeEventListener('mousemove', handleMouse);
   }, []);
 
-  // Camera preview
+  // --- Camera init ---
   useEffect(() => {
     const initCamera = async () => {
       try {
@@ -51,7 +53,7 @@ export default function App() {
     initCamera();
   }, []);
 
-  // Start Recording Studio
+  // --- Studio recording ---
   const startStudio = async () => {
     try {
       setError('');
@@ -80,14 +82,17 @@ export default function App() {
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (screenVideo) ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-        else { ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+        else ctx.fillStyle = '#000', ctx.fillRect(0,0,canvas.width,canvas.height);
+
         const camW = canvas.width * 0.25;
         const camH = canvas.height * 0.25;
         ctx.drawImage(camVideo, canvas.width - camW - 10, canvas.height - camH - 10, camW, camH);
+
         ctx.fillStyle = 'rgba(255,0,0,0.7)';
         ctx.beginPath();
         ctx.arc(cursorPos.x, cursorPos.y, 10, 0, Math.PI*2);
         ctx.fill();
+
         requestAnimationFrame(draw);
       };
       draw();
@@ -118,7 +123,7 @@ export default function App() {
     else { mediaRecorder.pause(); setPaused(true); }
   };
 
-  // Transcription
+  // --- Transcription ---
   const startTranscript = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert('Speech recognition not supported');
@@ -127,16 +132,12 @@ export default function App() {
     recognition.onresult = (event) => {
       let text = '';
       for (let i=event.resultIndex;i<event.results.length;i++) text += event.results[i][0].transcript;
-      setTranscript(prev => {
-        const updated = prev + ' ' + text;
-        localStorage.setItem('transcript', updated);
-        return updated;
-      });
+      setTranscript(prev => prev + ' ' + text);
     };
     recognition.start();
   };
 
-  // Course Outline Generator
+  // --- Course outline ---
   const lessonPatterns = ['Introduction','Core Concepts','Deep Dive','Practical Application','Common Mistakes','Advanced Tips'];
   const generateCourse = () => {
     let weeks = [];
@@ -149,44 +150,103 @@ export default function App() {
       weeks.push({ week:w, videos:vids });
     }
     setOutline(weeks);
-    localStorage.setItem('outline', JSON.stringify(weeks));
+    localStorage.setItem('outline', JSON.stringify(weeks)); // autosave
   };
 
-  // Autosave course/topic and thumbnail
+  // --- Autosave outline ---
   useEffect(() => {
-    const savedCourse = JSON.parse(localStorage.getItem('outline'));
-    const savedTranscript = localStorage.getItem('transcript');
-    const savedThumb = localStorage.getItem('thumbText');
-    if (savedCourse) setOutline(savedCourse);
-    if (savedTranscript) setTranscript(savedTranscript);
-    if (savedThumb) setThumbText(savedThumb);
+    const saved = localStorage.getItem('outline');
+    if (saved) setOutline(JSON.parse(saved));
   }, []);
 
+  // --- Thumbnail generator ---
   useEffect(() => {
-    localStorage.setItem('thumbText', thumbText);
+    const canvas = thumbCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#7F00FF');
+    grad.addColorStop(1, '#E100FF');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(thumbText || 'Thumbnail Preview', canvas.width / 2, canvas.height / 2);
+
+    // Emoji/icon
+    ctx.font = '48px serif';
+    ctx.fillText('🎬', canvas.width/2, canvas.height/2 - 60);
   }, [thumbText]);
 
+  const downloadThumbnail = () => {
+    const canvas = thumbCanvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'thumbnail.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 text-black p-6 font-sans'>
-      <h1 className='text-3xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500'>🎬 Course Video Studio Pro</h1>
+    <div className='min-h-screen bg-white text-black p-6 font-sans'>
+      <h1 className='text-3xl font-bold mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text'>
+        🎬 Course Video Studio Pro
+      </h1>
 
       <div className='flex gap-3 mb-6'>
         {['planner','studio','transcript','thumbnail','library'].map(t => (
-          <button key={t} onClick={()=>setTab(t)} className={`px-4 py-2 rounded-lg font-medium transition ${tab===t?'bg-gradient-to-r from-purple-500 to-pink-500 text-white':'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
+          <button key={t} onClick={()=>setTab(t)} className={`px-3 py-1 rounded-lg font-semibold ${tab===t?'bg-purple-500 text-white':'bg-gray-200 text-gray-700'}`}>
             {t}
           </button>
         ))}
       </div>
 
-      <div className='border p-4 rounded-xl shadow bg-white min-h-[400px]'>
+      <div className='border p-4 rounded shadow bg-gray-50 min-h-[400px]'>
+        {/* --- Planner --- */}
         {tab==='planner' && (
           <div className='space-y-4'>
-            <input type='text' placeholder='Course Topic' value={course.topic} onChange={e=>setCourse({...course,topic:e.target.value})} className='border px-2 py-1 w-full rounded'/>
-            <button onClick={generateCourse} className='px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700'>Generate Outline</button>
-            <pre>{JSON.stringify(outline,null,2)}</pre>
+            <input
+              type='text'
+              placeholder='Course Topic'
+              value={course.topic}
+              onChange={e=>setCourse({...course,topic:e.target.value})}
+              className='border px-3 py-2 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500'
+            />
+            <button
+              onClick={generateCourse}
+              className='px-5 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:opacity-90 transition'
+            >
+              Generate Outline
+            </button>
+
+            {outline.length > 0 && (
+              <div className='grid md:grid-cols-2 gap-4 mt-4'>
+                {outline.map((week) => (
+                  <div key={week.week} className='p-4 rounded-xl shadow-md bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100'>
+                    <h2 className='text-lg font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500'>
+                      Week {week.week}
+                    </h2>
+                    <ul className='space-y-1'>
+                      {week.videos.map((vid) => (
+                        <li key={vid.label} className='px-3 py-2 rounded-lg bg-white shadow-sm hover:bg-purple-50 transition'>
+                          <span className='font-semibold'>{vid.label}:</span> {vid.title}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
+        {/* --- Studio --- */}
         {tab==='studio' && (
           <div className='space-y-4'>
             <div className='relative'>
@@ -205,6 +265,7 @@ export default function App() {
           </div>
         )}
 
+        {/* --- Transcript --- */}
         {tab==='transcript' && (
           <div>
             <button onClick={startTranscript} className='px-4 py-2 rounded-lg bg-purple-600 text-white mb-2 hover:bg-purple-700'>Start Transcription</button>
@@ -212,16 +273,27 @@ export default function App() {
           </div>
         )}
 
+        {/* --- Thumbnail --- */}
         {tab==='thumbnail' && (
-          <div>
-            <input type='text' placeholder='Thumbnail Text' value={thumbText} onChange={e=>setThumbText(e.target.value)} className='border px-2 py-1 w-full rounded mb-2'/>
-            <div className='thumb-preview p-4 border rounded bg-gray-100'>{thumbText || 'Thumbnail Preview'}</div>
+          <div className='space-y-4'>
+            <input
+              type='text'
+              placeholder='Thumbnail Text'
+              value={thumbText}
+              onChange={e=>setThumbText(e.target.value)}
+              className='border px-2 py-1 w-full rounded'
+            />
+            <canvas ref={thumbCanvasRef} width={640} height={360} className='border rounded shadow-lg w-full' />
+            <button onClick={downloadThumbnail} className='px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700'>
+              Download Thumbnail
+            </button>
           </div>
         )}
 
+        {/* --- Library --- */}
         {tab==='library' && (
           <div className='space-y-2'>
-            {clips.length===0 ? <p>No clips yet</p> : clips.map((c,i)=><video key={i} src={c} controls className='w-full rounded'/>) }
+            {clips.length===0 ? <p>No clips yet</p> : clips.map((c,i)=><video key={i} src={c} controls className='w-full rounded'/>)}
           </div>
         )}
       </div>
