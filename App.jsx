@@ -1,3 +1,4 @@
+
 // App.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import './index.css';
@@ -25,7 +26,6 @@ export default function App() {
     return () => window.removeEventListener('mousemove', handleMouse);
   }, []);
 
-  // Auto-start camera preview
   useEffect(() => {
     const initCamera = async () => {
       try {
@@ -55,23 +55,12 @@ export default function App() {
     try {
       setError('');
       let screenStream = null;
-      try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      } catch {
-        console.log('Screen capture denied, using camera only');
-      }
+      try { screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true }); } catch { console.log('Screen capture denied, using camera only'); }
       const cam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-
-      const camVideo = document.createElement('video');
-      camVideo.srcObject = cam;
-      await camVideo.play();
+      const camVideo = document.createElement('video'); camVideo.srcObject = cam; await camVideo.play();
 
       let screenVideo;
-      if (screenStream) {
-        screenVideo = document.createElement('video');
-        screenVideo.srcObject = screenStream;
-        await screenVideo.play();
-      }
+      if (screenStream) { screenVideo = document.createElement('video'); screenVideo.srcObject = screenStream; await screenVideo.play(); }
 
       const canvas = combinedCanvasRef.current;
       const ctx = canvas.getContext('2d');
@@ -79,16 +68,10 @@ export default function App() {
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (screenVideo) ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-        else ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        const camW = canvas.width * 0.25;
-        const camH = canvas.height * 0.25;
+        else { ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+        const camW = canvas.width * 0.25; const camH = canvas.height * 0.25;
         ctx.drawImage(camVideo, canvas.width - camW - 10, canvas.height - camH - 10, camW, camH);
-
-        ctx.fillStyle = 'rgba(255,0,0,0.7)';
-        ctx.beginPath();
-        ctx.arc(cursorPos.x, cursorPos.y, 10, 0, Math.PI*2);
-        ctx.fill();
-
+        ctx.fillStyle = 'rgba(255,0,0,0.7)'; ctx.beginPath(); ctx.arc(cursorPos.x, cursorPos.y, 10, 0, Math.PI*2); ctx.fill();
         requestAnimationFrame(draw);
       };
       draw();
@@ -97,15 +80,10 @@ export default function App() {
       const recorder = new MediaRecorder(stream);
       let chunks = [];
       recorder.ondataavailable = (e) => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        setClips(prev => [...prev, url]);
-      };
+      recorder.onstop = () => { const blob = new Blob(chunks, { type: 'video/webm' }); const url = URL.createObjectURL(blob); setClips(prev => [...prev, url]); };
       recorder.start();
       setMediaRecorder(recorder);
-      setRecording(true);
-      setPaused(false);
+      setRecording(true); setPaused(false);
     } catch (err) {
       console.error(err);
       setError('Recording failed. Check camera/mic permissions.');
@@ -118,15 +96,8 @@ export default function App() {
   const startTranscript = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert('Speech recognition not supported');
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.onresult = (event) => {
-      let text = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        text += event.results[i][0].transcript;
-      }
-      setTranscript(prev => prev + ' ' + text);
-    };
+    const recognition = new SpeechRecognition(); recognition.continuous = true;
+    recognition.onresult = (event) => { let text = ''; for (let i=event.resultIndex;i<event.results.length;i++) text += event.results[i][0].transcript; setTranscript(prev => prev + ' ' + text); };
     recognition.start();
   };
 
@@ -146,19 +117,19 @@ export default function App() {
 
   return (
     <div className='min-h-screen bg-white text-black p-6 font-sans'>
-      <h1 className='text-3xl font-bold mb-6'>🎬 Course Video Studio Pro</h1>
+      <h1 className='text-3xl font-bold mb-6 text-gradient'>🎬 Course Video Studio Pro</h1>
 
       <div className='flex gap-3 mb-6'>
         {['planner','studio','transcript','thumbnail','library'].map(t => (
-          <button key={t} onClick={()=>setTab(t)} className={`px-4 py-2 rounded-xl ${tab===t?'bg-blue-600 text-white':'bg-gray-200 text-black'}`}>{t}</button>
+          <button key={t} onClick={()=>setTab(t)} className={`tab-btn ${tab===t?'tab-active':'tab-inactive'}`}>{t}</button>
         ))}
       </div>
 
       <div className='border p-4 rounded shadow bg-gray-50 min-h-[400px]'>
         {tab==='planner' && (
           <div className='space-y-4'>
-            <input type='text' placeholder='Course Topic' value={course.topic} onChange={e=>setCourse({...course,topic:e.target.value})} className='border px-2 py-1 w-full rounded'/>
-            <button onClick={generateCourse} className='bg-blue-600 text-white px-4 py-2 rounded'>Generate Outline</button>
+            <input type='text' placeholder='Course Topic' value={course.topic} onChange={e=>setCourse({...course,topic:e.target.value})} />
+            <button onClick={generateCourse} className='btn btn-primary'>Generate Outline</button>
             <pre>{JSON.stringify(outline,null,2)}</pre>
           </div>
         )}
@@ -166,15 +137,15 @@ export default function App() {
         {tab==='studio' && (
           <div className='space-y-4'>
             <div className='relative'>
-              <canvas ref={combinedCanvasRef} width={1280} height={720} className='w-full bg-black rounded' />
-              {recording && <div className='absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded'>{paused?'PAUSED':'REC 🔴'}</div>}
+              <canvas ref={combinedCanvasRef} width={1280} height={720} className='w-full bg-black rounded-xl shadow-lg' />
+              {recording && <div className='absolute top-2 left-2 bg-red-600 text-white px-3 py-1 rounded-lg font-semibold'>{paused?'PAUSED':'REC 🔴'}</div>}
             </div>
             {!recording ? (
-              <button onClick={startStudio} className='bg-green-600 text-white px-4 py-2 rounded'>Start Recording</button>
+              <button onClick={startStudio} className='btn btn-success'>Start Recording</button>
             ) : (
               <div className='flex gap-2'>
-                <button onClick={pauseResume} className='bg-yellow-500 text-white px-4 py-2 rounded'>{paused?'Resume':'Pause'}</button>
-                <button onClick={stopStudio} className='bg-red-600 text-white px-4 py-2 rounded'>Stop</button>
+                <button onClick={pauseResume} className='btn btn-warning'>{paused?'Resume':'Pause'}</button>
+                <button onClick={stopStudio} className='btn btn-danger'>Stop</button>
               </div>
             )}
             {error && <p className='text-red-600'>{error}</p>}
@@ -183,7 +154,7 @@ export default function App() {
 
         {tab==='transcript' && (
           <div>
-            <button onClick={startTranscript} className='bg-purple-600 text-white px-4 py-2 rounded mb-2'>Start Transcription</button>
+            <button onClick={startTranscript} className='btn btn-purple mb-2'>Start Transcription</button>
             <textarea value={transcript} readOnly className='w-full h-64 border p-2 rounded'></textarea>
           </div>
         )}
@@ -191,9 +162,7 @@ export default function App() {
         {tab==='thumbnail' && (
           <div>
             <input type='text' placeholder='Thumbnail Text' value={thumbText} onChange={e=>setThumbText(e.target.value)} className='border px-2 py-1 w-full rounded mb-2'/>
-            <div className='w-full h-64 bg-gray-200 flex items-center justify-center rounded'>
-              <span className='text-2xl font-bold'>{thumbText || 'Thumbnail Preview'}</span>
-            </div>
+            <div className='thumb-preview'>{thumbText || 'Thumbnail Preview'}</div>
           </div>
         )}
 
