@@ -1,4 +1,3 @@
-/* index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -18,7 +17,15 @@ body {
 
 button {
   transition: background-color 0.2s ease;
+  cursor: pointer;
+  font-weight: 600;
 }
+
+button.bg-blue-600:hover { background-color: #2563eb; }
+button.bg-green-600:hover { background-color: #16a34a; }
+button.bg-red-600:hover { background-color: #dc2626; }
+button.bg-yellow-500:hover { background-color: #f59e0b; }
+button.bg-purple-600:hover { background-color: #7c3aed; }
 
 canvas {
   display: block;
@@ -29,4 +36,11 @@ canvas {
 video {
   max-width: 100%;
   border-radius: 0.5rem;
+}
+
+input, textarea {
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
 }
