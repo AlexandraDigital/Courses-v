@@ -1,16 +1,10 @@
-// App.jsx - Full React App for Course Video Studio
+
+// App.jsx - React Course Video Studio (No Sanity, with GROQ API key env placeholder)
 
 import { useState, useRef, useEffect } from "react";
-import { createClient } from '@sanity/client';
 
-// Configure GROQ client with Cloudflare key
-const sanityClient = createClient({
-  projectId: 'YOUR_PROJECT_ID', // replace with your Cloudflare project ID
-  dataset: 'production',
-  apiVersion: '2026-04-06',
-  useCdn: false,
-  token: 'GROQ_API_KEY', // Cloudflare GROQ key placeholder
-});
+// Environment variable placeholder for GROQ AI API key (saved in Cloudflare)
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
 export default function App() {
   const [tab, setTab] = useState("planner");
