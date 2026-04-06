@@ -9,8 +9,8 @@ export default function App() {
   const [recording, setRecording] = useState(false);
   const [paused, setPaused] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [clips, setClips] = useState([]);
-  const [transcript, setTranscript] = useState("");
+  const [clips, setClips] = useState(() => JSON.parse(localStorage.getItem("clips") || "[]"));
+  const [transcript, setTranscript] = useState(() => localStorage.getItem("transcript") || "");
   const [course, setCourse] = useState({ topic: "", weeks: 4, videos: 3 });
   const [outline, setOutline] = useState([]);
   const [thumbText, setThumbText] = useState("");
@@ -20,44 +20,14 @@ export default function App() {
 
   const combinedCanvasRef = useRef(null);
 
-  // ------------------- AUTOSAVE -------------------
-  useEffect(() => {
-    // Load saved state
-    const savedOutline = localStorage.getItem("outline");
-    const savedThumbnail = localStorage.getItem("thumbnailURL");
-    const savedTranscript = localStorage.getItem("transcript");
-    const savedClips = localStorage.getItem("clips");
-
-    if (savedOutline) setOutline(JSON.parse(savedOutline));
-    if (savedThumbnail) setThumbnailURL(savedThumbnail);
-    if (savedTranscript) setTranscript(savedTranscript);
-    if (savedClips) setClips(JSON.parse(savedClips));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("outline", JSON.stringify(outline));
-  }, [outline]);
-
-  useEffect(() => {
-    localStorage.setItem("thumbnailURL", thumbnailURL);
-  }, [thumbnailURL]);
-
-  useEffect(() => {
-    localStorage.setItem("transcript", transcript);
-  }, [transcript]);
-
-  useEffect(() => {
-    localStorage.setItem("clips", JSON.stringify(clips));
-  }, [clips]);
-
-  // ------------------- MOUSE CURSOR -------------------
+  // Mouse tracking
   useEffect(() => {
     const handleMouse = (e) => setCursorPos({ x: e.clientX, y: e.clientY });
     window.addEventListener("mousemove", handleMouse);
     return () => window.removeEventListener("mousemove", handleMouse);
   }, []);
 
-  // ------------------- CAMERA PREVIEW -------------------
+  // Camera preview
   useEffect(() => {
     const initCamera = async () => {
       try {
@@ -86,7 +56,7 @@ export default function App() {
     initCamera();
   }, []);
 
-  // ------------------- RECORDING -------------------
+  // Studio recording
   const startStudio = async () => {
     try {
       setError("");
@@ -114,17 +84,17 @@ export default function App() {
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (screenVideo) ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-        else {
-          ctx.fillStyle = "#000";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        else ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         const camW = canvas.width * 0.25;
         const camH = canvas.height * 0.25;
         ctx.drawImage(camVideo, canvas.width - camW - 10, canvas.height - camH - 10, camW, camH);
+
         ctx.fillStyle = "rgba(255,0,0,0.7)";
         ctx.beginPath();
         ctx.arc(cursorPos.x, cursorPos.y, 10, 0, Math.PI * 2);
         ctx.fill();
+
         requestAnimationFrame(draw);
       };
       draw();
@@ -136,7 +106,11 @@ export default function App() {
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: "video/webm" });
         const url = URL.createObjectURL(blob);
-        setClips((prev) => [...prev, url]);
+        setClips((prev) => {
+          const updated = [...prev, url];
+          localStorage.setItem("clips", JSON.stringify(updated));
+          return updated;
+        });
       };
       recorder.start();
       setMediaRecorder(recorder);
@@ -156,16 +130,12 @@ export default function App() {
 
   const pauseResume = () => {
     if (!mediaRecorder) return;
-    if (paused) {
-      mediaRecorder.resume();
-      setPaused(false);
-    } else {
-      mediaRecorder.pause();
-      setPaused(true);
-    }
+    if (paused) mediaRecorder.resume();
+    else mediaRecorder.pause();
+    setPaused(!paused);
   };
 
-  // ------------------- TRANSCRIPTION -------------------
+  // Transcription with autosave
   const startTranscript = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported");
@@ -175,18 +145,20 @@ export default function App() {
       let text = "";
       for (let i = event.resultIndex; i < event.results.length; i++)
         text += event.results[i][0].transcript;
-      setTranscript((prev) => prev + " " + text);
+      setTranscript((prev) => {
+        const updated = prev + " " + text;
+        localStorage.setItem("transcript", updated);
+        return updated;
+      });
     };
     recognition.start();
   };
 
-  // ------------------- AI COURSE OUTLINE -------------------
-  const generateCourse = async () => {
+  // AI-powered course outline
+  const generateAIOutline = async () => {
     if (!course.topic) return alert("Enter course topic");
-
-    setError("Generating AI-powered course outline...");
-
     try {
+      setError("Generating AI outline...");
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -197,34 +169,37 @@ export default function App() {
           model: "gpt-4o-mini",
           messages: [
             {
-              role: "user",
-              content: `Create a professional ${course.weeks}-week course outline on "${course.topic}". 
-              Each week should have ${course.videos} unique lessons with subtopics and action points, formatted as JSON like: 
-              [{ "week": 1, "videos": [{"label": "Lesson 1.1","title":"..."}, ...]}, ...]`,
+              role: "system",
+              content: "You are an expert course designer creating structured course outlines."
             },
+            {
+              role: "user",
+              content: `Create a ${course.weeks}-week course about "${course.topic}".
+Generate ${course.videos} unique lessons per week with short subtopics for each lesson.
+Return JSON like this:
+[
+  { "week": 1, "videos": [{ "label": "Lesson 1.1", "title": "Lesson Title", "subtopics": ["Subtopic 1","Subtopic 2"] }] }
+]`
+            }
           ],
           temperature: 0.7,
         }),
       });
       const data = await res.json();
-      if (data.choices?.[0]?.message?.content) {
-        const parsed = JSON.parse(data.choices[0].message.content);
-        setOutline(parsed);
-        setError("");
-      } else {
-        setError("AI outline generation failed");
-      }
+      const aiOutline = JSON.parse(data.choices[0].message.content);
+      setOutline(aiOutline);
+      setError("");
     } catch (err) {
       console.error(err);
       setError("AI outline generation failed");
     }
   };
 
-  // ------------------- AI THUMBNAIL -------------------
+  // AI Thumbnail generator
   const generateThumbnail = async () => {
     if (!thumbText) return alert("Enter thumbnail text");
     try {
-      setError("Generating AI thumbnail...");
+      setError("Generating thumbnail...");
       const res = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
@@ -250,7 +225,6 @@ export default function App() {
     }
   };
 
-  // ------------------- RENDER -------------------
   return (
     <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center p-6 gap-6">
       <h1 className="text-3xl font-bold text-gradient">🎬 Course Video Studio Pro</h1>
@@ -269,10 +243,10 @@ export default function App() {
         ))}
       </div>
 
-      <div className="w-full max-w-4xl border p-6 rounded-xl shadow-lg bg-gray-50">
+      <div className="w-full max-w-4xl border p-6 rounded-xl shadow-lg bg-gray-50 flex flex-col items-center">
         {/* Planner */}
         {tab === "planner" && (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col gap-4 items-center w-full">
             <input
               type="text"
               placeholder="Course Topic"
@@ -281,29 +255,41 @@ export default function App() {
               className="border p-2 rounded w-full"
             />
             <button
-              onClick={generateCourse}
+              onClick={generateAIOutline}
               className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg"
             >
               Generate AI Outline
             </button>
-            <div className="w-full overflow-x-auto mt-4 flex flex-col items-center gap-2">
-              {outline.map((w) => (
-                <div key={w.week} className="mb-2 border p-2 rounded w-full max-w-xl">
-                  <h3 className="font-semibold text-center">Week {w.week}</h3>
-                  <ul className="list-disc ml-6">
-                    {w.videos.map((v) => (
-                      <li key={v.label}>{v.title}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+
+            {outline.length > 0 && (
+              <div className="w-full mt-4 flex flex-col items-center gap-4">
+                {outline.map((w) => (
+                  <div key={w.week} className="border p-3 rounded w-full">
+                    <h3 className="font-semibold text-lg">Week {w.week}</h3>
+                    <ul className="list-disc ml-6">
+                      {w.videos.map((v) => (
+                        <li key={v.label}>
+                          <strong>{v.title}</strong>
+                          {v.subtopics?.length > 0 && (
+                            <ul className="list-decimal ml-4 mt-1">
+                              {v.subtopics.map((s, i) => (
+                                <li key={i}>{s}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Studio */}
         {tab === "studio" && (
-          <div className="flex flex-col gap-4 items-center">
+          <div className="flex flex-col gap-4 items-center w-full">
             <canvas
               ref={combinedCanvasRef}
               width={1280}
@@ -344,7 +330,7 @@ export default function App() {
 
         {/* Transcript */}
         {tab === "transcript" && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 w-full">
             <button
               onClick={startTranscript}
               className="bg-purple-500 text-white px-4 py-2 rounded-lg mb-2"
@@ -361,7 +347,7 @@ export default function App() {
 
         {/* Thumbnail */}
         {tab === "thumbnail" && (
-          <div className="flex flex-col gap-2 items-center">
+          <div className="flex flex-col gap-2 items-center w-full">
             <input
               type="text"
               placeholder="Thumbnail Text"
@@ -388,7 +374,7 @@ export default function App() {
 
         {/* Library */}
         {tab === "library" && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 w-full">
             {clips.length === 0 ? (
               <p>No clips yet</p>
             ) : (
