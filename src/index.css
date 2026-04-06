@@ -1,27 +1,31 @@
 /* src/index.css */
 
+/* Tailwind base imports (if you’re using Tailwind) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom global styles */
+/* Body styling */
 html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
   font-family: 'Inter', sans-serif;
-  background: #ffffff;
-  color: #111111;
+  background: #fefefe; /* soft white background */
+  color: #111;
 }
 
+/* Gradient text */
 .text-gradient {
   background: linear-gradient(90deg, #f97316, #ef4444);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+/* Buttons */
 button {
+  cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
 
@@ -29,26 +33,87 @@ button:hover {
   transform: scale(1.05);
 }
 
-input, textarea {
-  transition: all 0.2s ease-in-out;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #f97316;
-  box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
-}
-
+/* Canvas */
 canvas {
   border-radius: 1rem;
   box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 
-img {
-  border-radius: 1rem;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+/* Inputs */
+input, textarea {
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  outline: none;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
 }
 
-textarea {
-  resize: vertical;
+input:focus, textarea:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 5px rgba(249,115,22,0.5);
+}
+
+/* Planner and course outline */
+.planner-outline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.planner-week {
+  border: 1px solid #ddd;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  width: 100%;
+  max-width: 800px;
+  background: #ffffff;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.planner-week h3 {
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+/* AI Thumbnail */
+.thumbnail-preview {
+  max-width: 320px;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  margin-top: 1rem;
+}
+
+/* Recording overlay */
+.recording-indicator {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(255,0,0,0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+}
+
+/* Library video previews */
+video {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  margin-bottom: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .planner-week {
+    width: 100%;
+    max-width: 100%;
+  }
 }
