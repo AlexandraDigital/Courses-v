@@ -18,6 +18,7 @@ export default function App() {
   const [thumbnailURL, setThumbnailURL] = useState("");
   const [error, setError] = useState("");
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const [shareLinks, setShareLinks] = useState({}); // {clipIndex: url}
 
   const combinedCanvasRef = useRef(null);
 
@@ -188,12 +189,40 @@ export default function App() {
     }
   };
 
-  // Export MP4
+  // Upload clip to Cloudflare Worker + R2
+  const uploadClip = async (blob, filename) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", blob, filename);
+
+      const res = await fetch("https://your-worker-domain/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        return data.url;
+      } else throw new Error("Upload failed");
+    } catch (err) {
+      console.error(err);
+      setError("Video upload failed");
+      return null;
+    }
+  };
+
+  // Export MP4 locally
   const exportClip = (clipUrl, filename = "video.mp4") => {
     const a = document.createElement("a");
     a.href = clipUrl;
     a.download = filename;
     a.click();
+  };
+
+  // Copy link to clipboard
+  const copyToClipboard = (url) => {
+    navigator.clipboard.writeText(url);
+    alert("Copied shareable URL!");
   };
 
   return (
@@ -225,7 +254,7 @@ export default function App() {
               onChange={(e) => setCourse({ ...course, topic: e.target.value })}
               className="border p-2 rounded w-full"
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-col md:flex-row w-full">
               <button
                 onClick={generateCourse}
                 className="bg-gradient-to-r from-green-400 to-teal-500 text-white px-4 py-2 rounded-lg"
@@ -240,8 +269,12 @@ export default function App() {
               />
               <button
                 onClick={() => {
-                  try { setOutline(JSON.parse(manualOutline).weeks); setError(""); }
-                  catch { setError("Invalid JSON"); }
+                  try {
+                    setOutline(JSON.parse(manualOutline).weeks);
+                    setError("");
+                  } catch {
+                    setError("Invalid JSON");
+                  }
                 }}
                 className="bg-blue-400 text-white px-4 py-2 rounded-lg"
               >
@@ -320,16 +353,34 @@ export default function App() {
 
         {/* Library */}
         {tab === "library" && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             {clips.length === 0 ? (
               <p>No clips yet</p>
             ) : (
               clips.map((c, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <video src={c} controls className="w-full rounded" />
-                  <button onClick={() => exportClip(c, `clip-${i + 1}.mp4`)} className="bg-blue-500 text-white px-2 py-1 rounded">
-                    Download
-                  </button>
+                <div key={i} className="flex flex-col md:flex-row md:items-center gap-2">
+                  <video src={c} controls className="w-full md:w-3/4 rounded shadow" />
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={async () => {
+                        const blob = await fetch(c).then((r) => r.blob());
+                        const url = await uploadClip(blob, `clip-${i + 1}.mp4`);
+                        if (url) {
+                          setShareLinks((prev) => ({ ...prev, [i]: url }));
+                          copyToClipboard(url);
+                        }
+                      }}
+                      className="bg-green-500 text-white px-3 py-1 rounded"
+                    >
+                      Upload & Copy Link
+                    </button>
+                    <a href={c} download={`clip-${i + 1}.mp4`} target="_blank" className="text-blue-600 underline">
+                      Download
+                    </a>
+                    {shareLinks[i] && (
+                      <input type="text" readOnly value={shareLinks[i]} className="border px-2 py-1 w-full md:w-64 rounded" />
+                    )}
+                  </div>
                 </div>
               ))
             )}
