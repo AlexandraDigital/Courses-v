@@ -1,69 +1,132 @@
-// index.css
+/* index.css */
+
+/* Tailwind base utilities are assumed; add these for extra polish */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Global */
+/* Smooth fonts and background */
 html, body, #root {
-  @apply m-0 p-0 w-full h-full font-sans bg-white text-gray-900;
-  scroll-behavior: smooth;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global headings */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* Gradient text helper */
+.text-gradient {
+  background: linear-gradient(to right, #7f00ff, #e100ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Buttons */
+button {
+  transition: all 0.2s ease;
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
 }
 
 /* Tabs */
 .tab-btn {
-  @apply px-4 py-2 rounded-xl transition-all duration-200;
+  transition: all 0.2s ease;
 }
 .tab-active {
-  @apply bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
-.tab-inactive {
-  @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
-}
-
-/* Buttons */
-.btn {
-  @apply px-4 py-2 rounded-xl font-semibold shadow-md transition-all duration-200;
-}
-.btn-primary {
-  @apply bg-gradient-to-r from-orange-400 to-pink-500 text-white hover:from-pink-500 hover:to-orange-400;
-}
-.btn-secondary {
-  @apply bg-gray-100 text-gray-800 hover:bg-gray-200;
-}
-.btn-success { @apply bg-green-600 text-white hover:bg-green-700; }
-.btn-warning { @apply bg-yellow-500 text-white hover:bg-yellow-600; }
-.btn-danger  { @apply bg-red-600 text-white hover:bg-red-700; }
-.btn-purple  { @apply bg-purple-600 text-white hover:bg-purple-700; }
-
-/* Inputs & textareas */
-input, textarea {
-  @apply border border-gray-300 rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200;
+.tab-inactive:hover {
+  background-color: #e5e7eb;
 }
 
-/* Canvas styling */
+/* Canvas */
 canvas {
-  @apply rounded-xl shadow-lg;
+  border-radius: 1rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
-/* Card sections */
-.card {
-  @apply bg-white shadow-lg rounded-2xl p-6 md:p-10 my-4 transition-all duration-300 hover:shadow-2xl;
+/* Inputs and textareas */
+input, textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
 }
 
-/* Clips / video library */
-video {
-  @apply w-full rounded-xl shadow-md;
+input:focus, textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+  outline: none;
+  background-color: #f9fafb;
 }
 
 /* Thumbnail preview */
 .thumb-preview {
-  @apply w-full h-64 bg-gray-200 flex items-center justify-center rounded-xl text-gray-700 font-bold text-2xl;
+  border-radius: 1rem;
+  background: linear-gradient(to bottom right, #f9fafb, #f3f4f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 8rem;
+  color: #9ca3af;
+  font-weight: 600;
+  border: 2px dashed #d1d5db;
+  transition: all 0.2s ease;
 }
 
-/* Gradient text */
-.text-gradient {
-  background: linear-gradient(90deg, #f97316, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
+.thumb-preview:hover {
+  border-color: #6366f1;
+  color: #4f46e5;
+  background: linear-gradient(to bottom right, #f3f4f6, #e0e7ff);
+}
+
+/* Video clips */
+video {
+  border-radius: 1rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Utility shadows for cards */
+.shadow {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+.shadow-lg {
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* Scrollable JSON output */
+pre {
+  max-height: 300px;
+  overflow: auto;
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+}
+
+/* Gradient backgrounds for special buttons */
+.btn-gradient {
+  background: linear-gradient(to right, #7f00ff, #e100ff);
+  color: white;
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+.btn-gradient:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
 }
