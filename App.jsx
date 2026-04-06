@@ -1,8 +1,6 @@
-// App.jsx - React Course Video Studio (No Sanity, with GROQ API key env placeholder)
+import React, { useState, useRef, useEffect } from "react";
+import './index.css'; // TailwindCSS imports
 
-import { useState, useRef, useEffect } from "react";
-
-// Environment variable placeholder for GROQ AI API key (saved in Cloudflare)
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
 export default function App() {
@@ -50,7 +48,7 @@ export default function App() {
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (screenVideo) ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-        else ctx.fillRect(0, 0, canvas.width, canvas.height);
+        else ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
         const camW = canvas.width * 0.25;
         const camH = canvas.height * 0.25;
         ctx.drawImage(camVideo, canvas.width - camW - 10, canvas.height - camH - 10, camW, camH);
@@ -114,31 +112,64 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-black p-6">
+    <div className="min-h-screen bg-white text-black p-6 font-sans">
       <h1 className="text-3xl font-bold mb-6">🎬 Course Video Studio Pro</h1>
 
       <div className="flex gap-3 mb-6">
         {['planner','studio','transcript','thumbnail','library'].map(t => (
-          <button key={t} onClick={()=>setTab(t)} className={`px-4 py-2 rounded-xl ${tab===t?"bg-blue-600 text-white":"bg-gray-200"}`}>{t}</button>
+          <button key={t} onClick={()=>setTab(t)} className={`px-4 py-2 rounded-xl ${tab===t?"bg-blue-600 text-white":"bg-gray-200 text-black"}`}>{t}</button>
         ))}
       </div>
 
-      {tab==='studio' && (
-        <div className='space-y-4'>
-          <div className='relative'>
-            <canvas ref={combinedCanvasRef} width={1280} height={720} className='w-full bg-black rounded' />
-            {recording && <div className='absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded'>{paused?"PAUSED":"REC 🔴"}</div>}
+      <div className="border p-4 rounded shadow bg-gray-50 min-h-[400px]">
+        {tab==='planner' && (
+          <div className='space-y-4'>
+            <input type='text' placeholder='Course Topic' value={course.topic} onChange={e=>setCourse({...course,topic:e.target.value})} className='border px-2 py-1 w-full rounded'/>
+            <button onClick={generateCourse} className='bg-blue-600 text-white px-4 py-2 rounded'>Generate Outline</button>
+            <pre>{JSON.stringify(outline,null,2)}</pre>
           </div>
-          {!recording ? (
-            <button onClick={startStudio} className='bg-green-600 text-white px-4 py-2 rounded'>Start</button>
-          ) : (
-            <div className='flex gap-2'>
-              <button onClick={pauseResume} className='bg-yellow-500 text-white px-4 py-2 rounded'>{paused?"Resume":"Pause"}</button>
-              <button onClick={stopStudio} className='bg-red-600 text-white px-4 py-2 rounded'>Stop</button>
+        )}
+
+        {tab==='studio' && (
+          <div className='space-y-4'>
+            <div className='relative'>
+              <canvas ref={combinedCanvasRef} width={1280} height={720} className='w-full bg-black rounded' />
+              {recording && <div className='absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded'>{paused?"PAUSED":"REC 🔴"}</div>}
             </div>
-          )}
-        </div>
-      )}
+            {!recording ? (
+              <button onClick={startStudio} className='bg-green-600 text-white px-4 py-2 rounded'>Start</button>
+            ) : (
+              <div className='flex gap-2'>
+                <button onClick={pauseResume} className='bg-yellow-500 text-white px-4 py-2 rounded'>{paused?"Resume":"Pause"}</button>
+                <button onClick={stopStudio} className='bg-red-600 text-white px-4 py-2 rounded'>Stop</button>
+              </div>
+            )}
+            {error && <p className='text-red-600'>{error}</p>}
+          </div>
+        )}
+
+        {tab==='transcript' && (
+          <div>
+            <button onClick={startTranscript} className='bg-purple-600 text-white px-4 py-2 rounded mb-2'>Start Transcription</button>
+            <textarea value={transcript} readOnly className='w-full h-64 border p-2 rounded'></textarea>
+          </div>
+        )}
+
+        {tab==='thumbnail' && (
+          <div>
+            <input type='text' placeholder='Thumbnail Text' value={thumbText} onChange={e=>setThumbText(e.target.value)} className='border px-2 py-1 w-full rounded mb-2'/>
+            <div className='w-full h-64 bg-gray-200 flex items-center justify-center rounded'>
+              <span className='text-2xl font-bold'>{thumbText || 'Thumbnail Preview'}</span>
+            </div>
+          </div>
+        )}
+
+        {tab==='library' && (
+          <div className='space-y-2'>
+            {clips.length===0 ? <p>No clips yet</p> : clips.map((c,i)=><video key={i} src={c} controls className='w-full rounded'/>) }
+          </div>
+        )}
+      </div>
     </div>
   );
 }
